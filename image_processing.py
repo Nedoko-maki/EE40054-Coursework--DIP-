@@ -96,7 +96,8 @@ def _adaptive_median(window, window_size, shift, centre_weight, constant):
     weights = np.full(window_size, centre_weight)
     weights = np.subtract(weights, np.multiply(np.full(window_size, k), distance))
 
-    return _weighted_median(window.reshape(window_size), weights, window_size)  # pass off the final calculation to the weighted median f. 
+    return _weighted_median(window.reshape(window_size), weights, window_size)  
+    # pass off the final calculation to the weighted median f. 
 
 def adaptive_median_filter(image_array, centre_weight, constant, window_size=(3, 3), mode="reflect"):
     shift = window_size[0] // 2  # find the necessary shift for the centre of the window, floored div 2. 
@@ -110,7 +111,8 @@ def adaptive_median_filter(image_array, centre_weight, constant, window_size=(3,
 def _geometric_mean(window, k):
     return np.power(np.prod(window), k) 
 
-def geometric_mean_filter(image_array, window_size=(3, 3), mode="reflect"):  # most commonly used to filter out Gaussian noise
+def geometric_mean_filter(image_array, window_size=(3, 3), mode="reflect"):  
+    # most commonly used to filter out Gaussian noise
     k = 1.0/np.prod(window_size)  # save a bit of processing time by preprocessing the weight.
     _filter = scipy.ndimage.generic_filter(image_array, 
                                           _geometric_mean, 
@@ -124,7 +126,8 @@ def _arithmetic_mean(window, window_prod):
     return np.sum(window) / (window_prod)
 
 def arithmetic_mean_filter(image_array, window_size=(3, 3), mode="reflect"):
-    _window_prod = np.prod(window_size)  # save a bit of processing time by preprocessing the product of the window dims.
+    _window_prod = np.prod(window_size)  
+    # save a bit of processing time by preprocessing the product of the window dims.
     _filter = scipy.ndimage.generic_filter(image_array, 
                                           _arithmetic_mean, 
                                           window_size, 
@@ -151,12 +154,14 @@ def histogram_representation(image_array):
 
 
 def histogram_equalisation(image_array, h_range=255):
-    hist, _ = np.histogram(image_array.flatten(), 256, [0, 256])  # generate a histogram
+    hist, _ = np.histogram(image_array.flatten(), 256, [0, 256])  
+    # generate a histogram
     cdf = hist.cumsum() # get the cumulative sum of the histogram
     # cdf_normalized = cdf * float(hist.max()) / cdf.max()
 
     cdf_m = np.ma.masked_equal(cdf, 0)
-    cdf_m = (cdf_m - cdf_m.min()) * h_range / (cdf_m.max() - cdf_m.min())  # scale the values depending on the range of initial values
+    cdf_m = (cdf_m - cdf_m.min()) * h_range / (cdf_m.max() - cdf_m.min()) 
+    # scale the values depending on the range of initial values
     cdf = np.ma.filled(cdf_m, 0).astype('uint8')
     new_image_array = cdf[image_array]
 
@@ -173,7 +178,6 @@ def _nlm(window, small_window, big_window, Nw):
 
     half_width = big_window//2
     window = window.reshape((big_window, big_window, small_window, small_window))
-    # small_window = window[half_width - small_window: half_width + small_window, half_width - small_window: half_width + small_window]
     local_window = window[half_width, half_width]
     Ip = evaluate_norm_nlm(local_window, window, Nw)
     
@@ -181,7 +185,8 @@ def _nlm(window, small_window, big_window, Nw):
 
 def non_local_means_filter(image_array, h, small_window, big_window, mode="reflect"):
 
-    # THIS ISN'T USED BECAUSE IT MEMORY LEAKS OR TAKES WAY TOO MUCH MEMORY AND I DECIDED THAT USING A NAIVE SOLUTION WOULD SAVE TIME
+    # THIS ISN'T USED BECAUSE IT MEMORY LEAKS OR TAKES WAY TOO 
+    # MUCH MEMORY AND I DECIDED THAT USING A NAIVE SOLUTION WOULD SAVE TIME
 
     window_size = (big_window, big_window, small_window, small_window)
     Nw = (h**2)*(small_window**2)
@@ -197,7 +202,8 @@ def non_local_means_filter(image_array, h, small_window, big_window, mode="refle
 
 def non_local_means(image_array, h, small_window, big_window, mode="reflect"):
 
-    # refer to this paper for the implementation: https://www.researchgate.net/publication/38294293_Nonlocal_Means-Based_Speckle_Filtering_for_Ultrasound_Images
+    # refer to this paper for the implementation: 
+    # https://www.researchgate.net/publication/38294293_Nonlocal_Means-Based_Speckle_Filtering_for_Ultrasound_Images
 
     pad_width = big_window // 2  # define pad width
     padded_image = np.pad(image_array, pad_width=pad_width, mode=mode)  # pad the image
@@ -210,9 +216,10 @@ def non_local_means(image_array, h, small_window, big_window, mode="reflect"):
 
     for i in tqdm(range(pad_width, pad_width + height), desc="NLM user implementation", leave=True):
         for j in range(pad_width, pad_width + width):
-            pixel_window = neighbours[i,j]  # (small_window x small_window) array around the target pixel (nested array inside the whole array)
-            neighbour_window = neighbours[(i - pad_width):(i + pad_width + 1) , (j - pad_width):(j + pad_width + 1)]  # (big_window x big_window) 
-            # sliced pixel neighbourhood array around the target pixel
+            pixel_window = neighbours[i,j]  # (small_window x small_window) array around the target pixel 
+            # (nested array inside the whole array)
+            neighbour_window = neighbours[(i - pad_width):(i + pad_width + 1) , (j - pad_width):(j + pad_width + 1)]  
+            # (big_window x big_window) sliced pixel neighbourhood array around the target pixel
 
             Ip = evaluate_norm_nlm(pixel_window, neighbour_window, Nw)  # calculating Ip
             output_image[i - pad_width, j - pad_width] = np.clip(Ip, 0, 255) # keeping the pixel values between 0-255 
@@ -220,7 +227,8 @@ def non_local_means(image_array, h, small_window, big_window, mode="reflect"):
     return output_image.astype("uint8")
 
 
-def find_neighbours_nlm(padded_image, small_window,big_window, h, w):  # this function simply stores the neighbour array around each pixel (including the padded area).
+def find_neighbours_nlm(padded_image, small_window,big_window, h, w):  # this function simply stores the 
+    #  neighbour array around each pixel (including the padded area).
     small_width, big_width = small_window // 2, big_window // 2
     neighbours = np.zeros((padded_image.shape[0], padded_image.shape[1], small_window, small_window))  # make output array
 
@@ -247,21 +255,24 @@ def evaluate_norm_nlm(pixel_window, neighbour_window, Nw):  # optimised eval fun
 
 def _ad(window, window_size, k, gamma):
 
-    window = window.reshape(window_size)
+    window = window.reshape(window_size)  # reshape as it gives the window as a 1D arr. 
 
     centre_x, centre_y = window.shape[0] // 2, window.shape[1] // 2
 
-    deltaN = window[centre_x, centre_y - 1] - window[centre_x, centre_y]
-    deltaS = window[centre_x, centre_y + 1] - window[centre_x, centre_y]
-    deltaE = window[centre_x + 1, centre_y] - window[centre_x, centre_y]
-    deltaW = window[centre_x - 1, centre_y] - window[centre_x, centre_y]
+    dN = window[centre_x, centre_y - 1] - window[centre_x, centre_y]  # delta centre v north
+    dS = window[centre_x, centre_y + 1] - window[centre_x, centre_y]  # delta centre v south
+    dE = window[centre_x + 1, centre_y] - window[centre_x, centre_y]  # delta centre v east
+    dW = window[centre_x - 1, centre_y] - window[centre_x, centre_y]  # delta centre v west
     
-    gN = np.exp(-(deltaN / k) ** 2.)
-    gS = np.exp(-(deltaS / k) ** 2.)
-    gE = np.exp(-(deltaE / k) ** 2.)
-    gW = np.exp(-(deltaW / k) ** 2.)
+    gN = np.exp(-(dN / k) ** 2.)  # function defined in paper
+    gS = np.exp(-(dS / k) ** 2.)
+    gE = np.exp(-(dE / k) ** 2.)
+    gW = np.exp(-(dW / k) ** 2.)
 
-    return window[centre_x, centre_y] * (1 - gamma * (gN + gS + gE + gW)) + (gamma * (gN * window[centre_x, centre_y - 1] + gS * window[centre_x, centre_y + 1] + gE * window[centre_x + 1, centre_y] + gW * window[centre_x - 1, centre_y]))
+    return window[centre_x, centre_y] * (1 - gamma * (gN + gS + gE + gW)) + (gamma * (gN * window[centre_x, centre_y - 1] + 
+                                                                                      gS * window[centre_x, centre_y + 1] + 
+                                                                                      gE * window[centre_x + 1, centre_y] + 
+                                                                                      gW * window[centre_x - 1, centre_y]))
    
 def anisotropic_diffusion_filter(image_array, k, gamma, window_size=(3, 3), mode="reflect"):
     _filter = scipy.ndimage.generic_filter(image_array.astype("float32"), 
