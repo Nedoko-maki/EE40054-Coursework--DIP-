@@ -210,7 +210,19 @@ def non_local_means_filter(image_array, h, small_window, big_window, mode="refle
 
 
 def non_local_means(image_array, h, small_window, big_window, mode="reflect"):
+    """Non-local means (NLM) filter 
+    :param image_array: image array
+    :type image_array: np.ndarray
+    :param h: h parameter
+    :type h: int
+    :param small_window: small search window
+    :type small_window: int
+    :param big_window: big search window
+    :type big_window: int
+    :return: output image
+    :rtype: np.ndarray
 
+    """
     # refer to this paper for the implementation: 
     # https://www.researchgate.net/publication/38294293_Nonlocal_Means-Based_Speckle_Filtering_for_Ultrasound_Images
 
