@@ -1,13 +1,13 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import cv2, math, scipy
-import scipy.ndimage
+import math, scipy, scipy.ndimage
 from tqdm import tqdm
 
 
 def image_size(image_data: np.ndarray):
     print(f"Image is of shape {image_data.shape}, size {image_data.size}, max value {np.max(image_data)}")
     return image_data.shape
+
 
 def bit_plane_slicing(image_data):
     # find the maximum value, and get the rounded up log2 value 
@@ -48,6 +48,7 @@ def _trimmed_mean(window, window_size, exclude_n):
     window = sorted(window)[exclude_n:window_len - exclude_n]
     return np.mean(window)
 
+
 def trimmed_mean_filter(image_array, window_size=(3, 3), exclude_n=1, mode="reflect"):
     if np.prod(window_size) <= 2 * exclude_n:
         raise ValueError("Can't have that large of an exclude_n, array size after is less than 1.")
@@ -74,6 +75,7 @@ def _weighted_median(window, weights, window_size):
     window = np.multiply(window.reshape(window_size), weights)
     return np.median(window)
 
+
 def weighted_median_filter(image_array, weights, window_size=(3, 3), mode="reflect"):
     return scipy.ndimage.generic_filter(image_array, 
                                         _weighted_median, 
@@ -99,6 +101,7 @@ def _adaptive_median(window, window_size, shift, centre_weight, constant):
     return _weighted_median(window.reshape(window_size), weights, window_size)  
     # pass off the final calculation to the weighted median f. 
 
+
 def adaptive_median_filter(image_array, centre_weight, constant, window_size=(3, 3), mode="reflect"):
     shift = window_size[0] // 2  # find the necessary shift for the centre of the window, floored div 2. 
     return scipy.ndimage.generic_filter(image_array, 
@@ -110,6 +113,7 @@ def adaptive_median_filter(image_array, centre_weight, constant, window_size=(3,
 
 def _geometric_mean(window, k):
     return np.power(np.prod(window), k) 
+
 
 def geometric_mean_filter(image_array, window_size=(3, 3), mode="reflect"):  
     # most commonly used to filter out Gaussian noise
@@ -124,6 +128,7 @@ def geometric_mean_filter(image_array, window_size=(3, 3), mode="reflect"):
 
 def _arithmetic_mean(window, window_prod):
     return np.sum(window) / (window_prod)
+
 
 def arithmetic_mean_filter(image_array, window_size=(3, 3), mode="reflect"):
     _window_prod = np.prod(window_size)  
@@ -167,12 +172,15 @@ def histogram_equalisation(image_array, h_range=255):
 
     return new_image_array
 
+
 def gaussian_filter(image_array, sigma=1, mode="reflect"):
     return scipy.ndimage.gaussian_filter(image_array, sigma, mode=mode)
+
 
 def threshold_low_filter(image_array, minVal):
     image_array[image_array <= minVal] = 0 
     return image_array
+
 
 def _nlm(window, small_window, big_window, Nw):
 
@@ -182,6 +190,7 @@ def _nlm(window, small_window, big_window, Nw):
     Ip = evaluate_norm_nlm(local_window, window, Nw)
     
     return max(min(255, Ip), 0) # Clipping the pixel values to stay between 0-255 
+
 
 def non_local_means_filter(image_array, h, small_window, big_window, mode="reflect"):
 
@@ -211,7 +220,7 @@ def non_local_means(image_array, h, small_window, big_window, mode="reflect"):
     output_image = np.zeros(image_array.shape)  # create output array
     height, width = image_array.shape
 
-    neighbours = find_neighbours_nlm(padded_image, small_window, big_window, height, width) # preprocessing the neighbors of each pixel
+    neighbours = find_neighbours_nlm(padded_image, small_window, big_window, height, width) # preprocessing the neighbours of each pixel
     Nw = (h**2) * (small_window**2) # calculating neighbourhood window
 
     for i in tqdm(range(pad_width, pad_width + height), desc="NLM user implementation", leave=True):
@@ -245,7 +254,7 @@ def evaluate_norm_nlm(pixel_window, neighbour_window, Nw):  # optimised eval fun
     # and the original pixel array around the target pixel
     w = np.exp(-1*(np.sum(squared_diff, axis=(2, 3)))/Nw)  # sum the subarrays elementwise, 
     # so each subarray is summed but not the outer array (THIS WAS HARD TO FIGURE OUT, FUNNILY ENOUGH.)
-    
+
     Iq = neighbour_window[:, :, pixel_window.shape[0]//2, pixel_window.shape[1]//2]  # find all central values 'Iq' of the neighbours
 
     Ip = np.sum(np.multiply(w, Iq))  # calculate Ip
@@ -274,6 +283,7 @@ def _ad(window, window_size, k, gamma):
                                                                                       gE * window[centre_x + 1, centre_y] + 
                                                                                       gW * window[centre_x - 1, centre_y]))
    
+
 def anisotropic_diffusion_filter(image_array, k, gamma, window_size=(3, 3), mode="reflect"):
     _filter = scipy.ndimage.generic_filter(image_array.astype("float32"), 
                                           _ad, 
@@ -302,7 +312,6 @@ def lee_filter(image_array, window_size=(3, 3), mode="reflect"):
                                           extra_arguments=(var_k,), 
                                           mode=mode)
     return _filter
-
 
 
 def find_neighbours_srad(image_array, pad_width=1, mode="reflect"):
@@ -341,7 +350,6 @@ def compute_variation_coefficient(image_array, epsilon=1e-12):
     return q
 
 
-
 def srad(image_array, n_iters, time_step, decay_factor, mode="reflect"):
     """Speckle-Reducing Anisotropic Diffusion. Refer to this paper for the implementation:
     https://ieeexplore.ieee.org/document/1097762 
@@ -369,7 +377,8 @@ def srad(image_array, n_iters, time_step, decay_factor, mode="reflect"):
     dS = nS - image_array
     dN = nN - image_array
     dE = nE - image_array
-    dW = nW - image_array
+    dW = nW - image_array  # defining the deltas so that later 
+    # we can use them in the divergence calculation.
 
     q = compute_variation_coefficient(image_array)
 
@@ -380,10 +389,10 @@ def srad(image_array, n_iters, time_step, decay_factor, mode="reflect"):
 
     t = 0 # starting timestep
 
-    for i in tqdm(range(n_iters), desc="Running SRAD", leave=True):
+    for _ in tqdm(range(n_iters), desc="Running SRAD", leave=True):
 
-        q = compute_variation_coefficient(image_array)
-        q_0 = Q_0 * np.exp(-decay_factor*t)
+        q = compute_variation_coefficient(image_array)  # recalculate q 
+        q_0 = Q_0 * np.exp(-decay_factor*t)  # equation 37
 
         q_0_sqr = np.multiply(q_0, q_0)
         q_sqr = np.multiply(q, q)
@@ -395,11 +404,10 @@ def srad(image_array, n_iters, time_step, decay_factor, mode="reflect"):
         div = (
             S_c * dS - c * dN +
             E_c * dE - c * dW
-        )  # equation 58
+        )  # equation 58, calculating the div coefficient
 
         image_array = image_array + ((time_step / 4) * div)  # equation 61
         t += time_step 
-    
     
     return np.clip(image_array, 0, 255).astype(np.uint8)  # clip values and return as uint8.
 

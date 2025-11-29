@@ -145,7 +145,7 @@ def main_nzjers():
 
     nonlocal_image = ImageProcessor(original_image.copy())
     nonlocal_image.add_filter(ip.non_local_means, h=17, small_window=7, big_window=21)  # filters are added and run with .process_image()
-    nonlocal_image.add_filter(ip.adaptive_median_filter, 1, 0.001)
+    # nonlocal_image.add_filter(ip.adaptive_median_filter, 1, 0.001)
     nonlocal_image.add_filter(ip.threshold_low_filter, minVal=40)  # the args and kwargs are passed onto the filter functions. 
     
     nonlocal_image.process_image()
@@ -156,6 +156,8 @@ def main_nzjers():
     # print(w)
 
     gaussian_image = ImageProcessor(nonlocal_image.im)
+    gaussian_image.add_filter(ip.srad, 200, 0.2, 0.75)
+    
     gaussian_image.add_filter(ip.gaussian_filter, sigma=0.95)
     gaussian_image.process_image()
 
@@ -164,7 +166,7 @@ def main_nzjers():
 
     images.append([original_image, "Original image", {"mse": [original_image, original_image], "ssim": [original_image, original_image]}])
     images.append([nonlocal_image, "NLM-filtered image + thresholding (pixel < 40 = 0)", {"mse": [original_image, nonlocal_image.im], "ssim": [original_image, nonlocal_image.im]}])
-    images.append([gaussian_image, "Gaussian blurred image", {"mse": [original_image, gaussian_image.im], "ssim": [original_image, gaussian_image.im]}])
+    images.append([gaussian_image, "SRAD + Gaussian blurred image", {"mse": [original_image, gaussian_image.im], "ssim": [original_image, gaussian_image.im]}])
     images.append([thresholded_image, "Thresholded image (pixel > 30 = 255)"])
     images.append([generate_edges(thresholded_image, thr1=80, thr2=500), "Canny edge detection"])
 
@@ -175,7 +177,7 @@ def main_nzjers():
     tmp.add_filter(ip.gaussian_filter, sigma=0.95)
     tmp.process_image()
     tmp.im[30 < tmp.im] = 255
-    images.append([generate_edges(tmp.im, thr1=80), "with adaptive median filter"])
+    images.append([generate_edges(tmp.im, thr1=80), "with adaptive median filter after NLM,\n no SRAD"])
 
     display_images(images, rows=2, cols=3)  # display the images for easy review. 
 
@@ -217,22 +219,28 @@ def main_foetus():
     images = []
     image_filepath = Path("images/foetus.png")  # image filepath
     original_image = read_image(image_filepath)
-    images.append(original_image)
+    images.append([original_image, "original image"])
 
-    test = ImageProcessor(original_image)
+    test = ImageProcessor(original_image.copy())
 
-    test.add_filter(ip.srad, 200, 0.2, 0.75)
+    
     test.add_filter(ip.non_local_means, h=17, small_window=7, big_window=21)
-    # test.add_filter(ip.histogram_equalisation)
+    test.add_filter(ip.srad, 200, 0.2, 0.75)
+    # test.add_filter(ip.gaussian_filter, sigma=0.7)
     # for i in range(10):  # niter of anisotropic diff. 
     #     test.add_filter(ip.anisotropic_diffusion_filter, 10, 0.25)
     
     test.process_image()
     test.enforce_uint8(immediate=True)
 
-    images.append(generate_edges(test.im, thr1=20, thr2=70))
-    images.append(test.im)
-    images.append(generate_edges(test.im, thr1=60, thr2=100))
+
+    test2 = ImageProcessor(original_image.copy())
+    test2.add_filter(ip.non_local_means, h=17, small_window=7, big_window=21)
+    test2.process_image()
+    images.append([test2.im, "NLM filter (h:17, small:7, big:21)"])
+    # images.append(generate_edges(test.im, thr1=20, thr2=70))
+    images.append([test.im, "SRAD filtered image\n + NLM filter (h:17, small:7, big:21)"])
+    images.append([generate_edges(test2.im, thr1=40, thr2=70), "Canny edge detection, min: 40, max: 70"])
     
     display_images(images, rows=2, cols=2)
 
